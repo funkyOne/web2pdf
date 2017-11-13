@@ -1,0 +1,18 @@
+version: '3'
+services:
+  chrome:
+    image: justinribeiro/chrome-headless
+    cap_add: 
+      - SYS_ADMIN
+    expose:
+      - "9222"
+    restart: on-failure
+    
+  web2pdf:
+    build: ./web2pdf
+    image: web2pdf:latest
+    ports:
+      - "80:8080"
+    depends_on:
+      - chrome
+    restart: on-failure

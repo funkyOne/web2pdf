@@ -1,27 +1,13 @@
-const CDP = require('chrome-remote-interface'); 
-const fs = require("fs"); 
-const os = require("os"); 
-const path = require("path"); 
-const uuidv1 = require('uuid/v1'); 
-const dlMasterDir = path.join(os.tmpdir(), "dlCapture"); 
+const fs = require("fs");
+const os = require("os");
+const path = require("path");
+const uuidv1 = require('uuid/v1');
+const dlMasterDir = path.join(os.tmpdir(), "dlCapture");
 
 if (!fs.existsSync(dlMasterDir)) {
     fs.mkdirSync(dlMasterDir);
 }
 
-async function awaiter(client) {
-    const browserCode = () => {
-        return new Promise((fulfill, reject) => {
-            setInterval(() => {
-                if (window.status === "ready-for-print") fulfill()
-            }, 50);
-        });
-    };
-    await client.Runtime.evaluate({
-        expression: `(${browserCode})()`,
-        awaitPromise: true
-    });
-}
 const waitDownloadComplete = async (path, waitTimeSpanMs = 1000, timeoutMs = 60 * 1000) => {
     return new Promise((resolve, reject) => {
         const wait = (waitTimeSpanMs, totalWaitTimeMs) => setTimeout(
@@ -45,12 +31,13 @@ const waitDownloadComplete = async (path, waitTimeSpanMs = 1000, timeoutMs = 60 
                 (err) => {
                     reject(err);
                 }
-            ),
+                ),
             waitTimeSpanMs
         );
         wait(waitTimeSpanMs, 0);
     });
 };
+
 const isDownloadComplete = async (path) => {
     return new Promise((resolve, reject) => {
         fs.readdir(path, (err, files) => {
@@ -72,28 +59,28 @@ const isDownloadComplete = async (path) => {
         });
     });
 };
-//TODO clean up dlCapture folders on schedule
 
-async function getDownload(url) {
-    const protocol = await CDP({port: 9222});
+// TODO clean up dlCapture folders on schedule?
+async function getDownload(protocol) {
     try {
         const dlDir = path.join(dlMasterDir, uuidv1());
         fs.mkdirSync(dlDir);
-        const {Page} = protocol;
-        await Page.enable();
-        await protocol.send('Page.setDownloadBehavior', {behavior: "allow", downloadPath: dlDir});
-        Page.navigate({url: url});
-        await Page.loadEventFired();
-        console.log("page loaded");
-        await awaiter(protocol);
+        // TODO this has to be called before navigation
+        await protocol.send('Page.setDownloadBehavior', { behavior: "allow", downloadPath: dlDir });
+
         await waitDownloadComplete(dlDir)
             .catch((err) => console.error(err));
-        const files = fs.readdirSync(dlDir);
-        return path.join(dlDir, files[0]);
+        const files = fs.readdirSync(dlDir);        
+
+        return await new Promise(()=>{
+            fs.readFile(path, function (err, data) {
+                if(err) rejs(err);                
+                res(data);
+            });
+        })
+
     } catch (err) {
         console.error(err);
-    } finally {
-        protocol.close();
     }
 }
 module.exports = getDownload;

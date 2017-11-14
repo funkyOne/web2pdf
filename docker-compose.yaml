@@ -16,3 +16,5 @@ services:
     depends_on:
       - chrome
     restart: on-failure
+    environment:
+      - CHROME_HOST=chrome
